@@ -77,7 +77,7 @@ const config = {
           //   position: 'left',
           //   label: 'Tutorial',
           // },
-          //{to: '/blog', label: 'Blog', position: 'left'},
+          {to: '/docs', label: 'Wiki', position: 'left'},
           {
             href: 'https://github.com/jakobborg/jakobborg.github.io/',
             label: 'GitHub',
