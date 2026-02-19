@@ -36,7 +36,7 @@
       }
 
       main {
-        max-width: 900px;
+        max-width: 1024px;
         margin: 0 auto;
       }
 
@@ -48,6 +48,15 @@
       .subtitle {
         margin: 0.5rem 0 1.5rem;
         color: var(--muted);
+      }
+
+      .layout {
+        display: grid;
+        gap: 1rem;
+      }
+
+      .content {
+        min-width: 0;
       }
 
       .search-wrap {
@@ -113,8 +122,48 @@
         text-decoration: underline;
       }
 
-      .tags {
+      .tags,
+      .collections {
         color: var(--muted);
+      }
+
+      .collections-panel {
+        background: rgba(18, 26, 49, 0.6);
+        border: 1px solid var(--panel-border);
+        border-radius: 12px;
+        padding: 1rem;
+        align-self: start;
+      }
+
+      .collections-title {
+        margin: 0 0 0.75rem;
+        font-size: 1rem;
+      }
+
+      #collections {
+        display: grid;
+        gap: 0.4rem;
+      }
+
+      .collection-btn {
+        border: 1px solid var(--panel-border);
+        background: transparent;
+        color: var(--text);
+        text-align: left;
+        padding: 0.45rem 0.6rem;
+        border-radius: 8px;
+        cursor: pointer;
+        font: inherit;
+      }
+
+      .collection-btn:hover,
+      .collection-btn:focus-visible {
+        border-color: var(--accent);
+      }
+
+      .collection-btn.active {
+        border-color: var(--accent);
+        background: var(--accent-soft);
       }
 
       .empty {
@@ -125,55 +174,108 @@
         border-radius: 12px;
         background: rgba(18, 26, 49, 0.45);
       }
+
+      @media (min-width: 900px) {
+        .layout {
+          grid-template-columns: minmax(0, 1fr) 260px;
+        }
+      }
     </style>
   </head>
   <body>
     <main>
       <h1>Personal Music Library</h1>
-      <p class="subtitle">Search artists, albums, and tags to quickly filter your collection.</p>
+      <p class="subtitle">Search artists, albums, and tags, or choose a collection to filter your library.</p>
 
-      <div class="search-wrap">
-        <input
-          id="search"
-          type="search"
-          placeholder="Search by artist, album, or tag..."
-          aria-label="Search music library"
-        />
+      <div class="layout">
+        <section class="content">
+          <div class="search-wrap">
+            <input
+              id="search"
+              type="search"
+              placeholder="Search by artist, album, or tag..."
+              aria-label="Search music library"
+            />
+          </div>
+
+          <p id="results-meta" aria-live="polite">Loading library...</p>
+          <section id="library" aria-label="Albums"></section>
+        </section>
+
+        <aside class="collections-panel" aria-label="Collections">
+          <h2 class="collections-title">Collections</h2>
+          <div id="collections"></div>
+        </aside>
       </div>
-
-      <p id="results-meta" aria-live="polite">Loading library...</p>
-      <section id="library" aria-label="Albums"></section>
     </main>
 
     <script>
       const libraryEl = document.getElementById("library");
       const searchEl = document.getElementById("search");
       const resultsMetaEl = document.getElementById("results-meta");
+      const collectionsEl = document.getElementById("collections");
 
-      const toEntryMarkup = ({ artist, album, url, tags }) => `
+      let activeCollection = "all";
+
+      const toEntryMarkup = ({ artist, album, url, tags, collections = [] }) => `
         <article class="entry">
           <p class="entry-line">
             <span class="artist">${artist}</span>
             -
             <a class="album-link" href="${url}" target="_blank" rel="noopener noreferrer">${album}</a>
             <span class="tags">(${tags.join(", ")})</span>
+            ${collections.length ? `<br /><span class="collections">Collections: ${collections.join(", ")}</span>` : ""}
           </p>
         </article>
       `;
 
       const normalize = (value) => value.toLowerCase();
 
-      const render = (entries, query = "") => {
-        const filtered = !query
-          ? entries
-          : entries.filter(({ artist, album, tags }) =>
-              normalize(`${artist} ${album} ${tags.join(" ")}`).includes(query)
-            );
+      const getFilteredEntries = (entries, query = "", collection = "all") =>
+        entries.filter(({ artist, album, tags, collections = [] }) => {
+          const withinCollection =
+            collection === "all" || collections.some((name) => normalize(name) === collection);
+          if (!withinCollection) {
+            return false;
+          }
 
-        resultsMetaEl.textContent = `${filtered.length} result${filtered.length === 1 ? "" : "s"}`;
+          if (!query) {
+            return true;
+          }
+
+          return normalize(`${artist} ${album} ${tags.join(" ")}`).includes(query);
+        });
+
+      const renderCollections = (collectionNames) => {
+        const allCollections = ["all", ...collectionNames.map((name) => normalize(name))];
+        const labels = { all: "All collections" };
+        collectionNames.forEach((name) => {
+          labels[normalize(name)] = name;
+        });
+
+        collectionsEl.innerHTML = allCollections
+          .map(
+            (id) => `
+              <button
+                type="button"
+                class="collection-btn${activeCollection === id ? " active" : ""}"
+                data-collection="${id}"
+              >
+                ${labels[id]}
+              </button>
+            `
+          )
+          .join("");
+      };
+
+      const render = (entries, query = "") => {
+        const filtered = getFilteredEntries(entries, query, activeCollection);
+        const collectionText = activeCollection === "all" ? "all collections" : `collection: ${activeCollection}`;
+
+        resultsMetaEl.textContent = `${filtered.length} result${filtered.length === 1 ? "" : "s"} in ${collectionText}`;
 
         if (!filtered.length) {
-          libraryEl.innerHTML = '<p class="empty">No matches found. Try another search term.</p>';
+          libraryEl.innerHTML = '<p class="empty">No matches found. Try another search term or collection.</p>';
           return;
         }
 
@@ -188,10 +290,26 @@
             .slice()
             .sort((a, b) => a.artist.localeCompare(b.artist, undefined, { sensitivity: "base" }));
 
+          const collectionNames = [...new Set(entries.flatMap(({ collections = [] }) => collections))].sort((a, b) =>
+            a.localeCompare(b, undefined, { sensitivity: "base" })
+          );
+
+          renderCollections(collectionNames);
           render(entries);
 
           searchEl.addEventListener("input", (event) => {
             render(entries, normalize(event.target.value.trim()));
+          });
+
+          collectionsEl.addEventListener("click", (event) => {
+            const button = event.target.closest("[data-collection]");
+            if (!button) {
+              return;
+            }
+
+            activeCollection = button.dataset.collection;
+            renderCollections(collectionNames);
+            render(entries, normalize(searchEl.value.trim()));
           });
         } catch (error) {
           resultsMetaEl.textContent = "Could not load library data.";
