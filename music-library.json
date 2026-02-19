@@ -1,0 +1,62 @@
+[
+  {
+    "artist": "Aphex Twin",
+    "album": "Selected Ambient Works 85-92",
+    "url": "https://en.wikipedia.org/wiki/Selected_Ambient_Works_85%E2%80%9392",
+    "tags": ["ambient", "electronic", "classic"]
+  },
+  {
+    "artist": "Boards of Canada",
+    "album": "Music Has the Right to Children",
+    "url": "https://en.wikipedia.org/wiki/Music_Has_the_Right_to_Children",
+    "tags": ["idm", "downtempo", "nostalgic"]
+  },
+  {
+    "artist": "Burial",
+    "album": "Untrue",
+    "url": "https://en.wikipedia.org/wiki/Untrue_(album)",
+    "tags": ["uk garage", "electronic", "night"]
+  },
+  {
+    "artist": "Daft Punk",
+    "album": "Discovery",
+    "url": "https://en.wikipedia.org/wiki/Discovery_(Daft_Punk_album)",
+    "tags": ["house", "french touch", "energetic"]
+  },
+  {
+    "artist": "Floating Points",
+    "album": "Promises",
+    "url": "https://en.wikipedia.org/wiki/Promises_(Floating_Points,_Pharoah_Sanders_and_the_London_Symphony_Orchestra_album)",
+    "tags": ["jazz", "ambient", "orchestral"]
+  },
+  {
+    "artist": "Four Tet",
+    "album": "Rounds",
+    "url": "https://en.wikipedia.org/wiki/Rounds_(album)",
+    "tags": ["folktronica", "electronic", "warm"]
+  },
+  {
+    "artist": "Jon Hopkins",
+    "album": "Immunity",
+    "url": "https://en.wikipedia.org/wiki/Immunity_(Jon_Hopkins_album)",
+    "tags": ["techno", "minimal", "cinematic"]
+  },
+  {
+    "artist": "Nils Frahm",
+    "album": "All Melody",
+    "url": "https://en.wikipedia.org/wiki/All_Melody",
+    "tags": ["neo-classical", "ambient", "piano"]
+  },
+  {
+    "artist": "Portishead",
+    "album": "Dummy",
+    "url": "https://en.wikipedia.org/wiki/Dummy_(album)",
+    "tags": ["trip-hop", "moody", "classic"]
+  },
+  {
+    "artist": "Radiohead",
+    "album": "Kid A",
+    "url": "https://en.wikipedia.org/wiki/Kid_A",
+    "tags": ["art rock", "experimental", "iconic"]
+  }
+]
