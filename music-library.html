@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Personal Music Library</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0b1020;
+        --panel: #121a31;
+        --panel-border: #33415f;
+        --text: #f6f8ff;
+        --muted: #acb6d4;
+        --accent: #8ab4ff;
+        --accent-soft: rgba(138, 180, 255, 0.18);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Inter", sans-serif;
+        background: radial-gradient(circle at 20% 0%, #1b2545, var(--bg) 55%);
+        color: var(--text);
+        padding: clamp(1rem, 2.8vw, 2.25rem);
+      }
+
+      main {
+        max-width: 900px;
+        margin: 0 auto;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(1.5rem, 4vw, 2.25rem);
+      }
+
+      .subtitle {
+        margin: 0.5rem 0 1.5rem;
+        color: var(--muted);
+      }
+
+      .search-wrap {
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        padding-bottom: 0.8rem;
+        background: linear-gradient(to bottom, var(--bg), rgba(11, 16, 32, 0.92), transparent);
+      }
+
+      #search {
+        width: 100%;
+        border: 1px solid var(--panel-border);
+        border-radius: 12px;
+        padding: 0.85rem 1rem;
+        font-size: 1rem;
+        color: var(--text);
+        background: var(--panel);
+        outline: none;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      #search:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 4px var(--accent-soft);
+      }
+
+      #results-meta {
+        margin: 0.75rem 0 1rem;
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+
+      #library {
+        display: grid;
+        gap: 0.8rem;
+      }
+
+      .entry {
+        background: linear-gradient(165deg, rgba(255, 255, 255, 0.03), transparent), var(--panel);
+        border: 1px solid var(--panel-border);
+        border-radius: 12px;
+        padding: 0.9rem 1rem;
+      }
+
+      .entry-line {
+        margin: 0;
+        line-height: 1.5;
+      }
+
+      .artist {
+        font-weight: 600;
+      }
+
+      .album-link {
+        color: var(--accent);
+        text-decoration: none;
+        font-weight: 500;
+      }
+
+      .album-link:hover,
+      .album-link:focus-visible {
+        text-decoration: underline;
+      }
+
+      .tags {
+        color: var(--muted);
+      }
+
+      .empty {
+        text-align: center;
+        color: var(--muted);
+        padding: 1.75rem;
+        border: 1px dashed var(--panel-border);
+        border-radius: 12px;
+        background: rgba(18, 26, 49, 0.45);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Personal Music Library</h1>
+      <p class="subtitle">Search artists, albums, and tags to quickly filter your collection.</p>
+
+      <div class="search-wrap">
+        <input
+          id="search"
+          type="search"
+          placeholder="Search by artist, album, or tag..."
+          aria-label="Search music library"
+        />
+      </div>
+
+      <p id="results-meta" aria-live="polite">Loading library...</p>
+      <section id="library" aria-label="Albums"></section>
+    </main>
+
+    <script>
+      const libraryEl = document.getElementById("library");
+      const searchEl = document.getElementById("search");
+      const resultsMetaEl = document.getElementById("results-meta");
+
+      const toEntryMarkup = ({ artist, album, url, tags }) => `
+        <article class="entry">
+          <p class="entry-line">
+            <span class="artist">${artist}</span>
+            -
+            <a class="album-link" href="${url}" target="_blank" rel="noopener noreferrer">${album}</a>
+            <span class="tags">(${tags.join(", ")})</span>
+          </p>
+        </article>
+      `;
+
+      const normalize = (value) => value.toLowerCase();
+
+      const render = (entries, query = "") => {
+        const filtered = !query
+          ? entries
+          : entries.filter(({ artist, album, tags }) =>
+              normalize(`${artist} ${album} ${tags.join(" ")}`).includes(query)
+            );
+
+        resultsMetaEl.textContent = `${filtered.length} result${filtered.length === 1 ? "" : "s"}`;
+
+        if (!filtered.length) {
+          libraryEl.innerHTML = '<p class="empty">No matches found. Try another search term.</p>';
+          return;
+        }
+
+        libraryEl.innerHTML = filtered.map(toEntryMarkup).join("");
+      };
+
+      const init = async () => {
+        try {
+          const response = await fetch("./music-library.json");
+          const data = await response.json();
+          const entries = data
+            .slice()
+            .sort((a, b) => a.artist.localeCompare(b.artist, undefined, { sensitivity: "base" }));
+
+          render(entries);
+
+          searchEl.addEventListener("input", (event) => {
+            render(entries, normalize(event.target.value.trim()));
+          });
+        } catch (error) {
+          resultsMetaEl.textContent = "Could not load library data.";
+          libraryEl.innerHTML = '<p class="empty">Failed to load <code>music-library.json</code>.</p>';
+          console.error(error);
+        }
+      };
+
+      init();
+    </script>
+  </body>
+</html>
