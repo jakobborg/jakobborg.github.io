@@ -27,6 +27,7 @@
       }
 
       body {
+        position: relative;
         display: flex;
         align-items: flex-end;
         justify-content: flex-start;
@@ -37,23 +38,159 @@
         background-repeat: no-repeat;
       }
 
-      .brand {
-        margin: 0;
+      .content {
         color: #fff;
         font-family: "Inter", sans-serif;
         font-style: italic;
         font-weight: 200;
-        font-size: clamp(1.4rem, 3.6vw, 2.8rem);
         letter-spacing: 0.18em;
         text-transform: lowercase;
         text-align: left;
-        white-space: pre-line;
         line-height: 1.1;
+      }
+
+      .brand-link {
+        color: inherit;
+        text-decoration: none;
+        font-size: clamp(1.4rem, 3.6vw, 2.8rem);
+        display: inline-block;
+      }
+
+      .subtitle {
+        margin-top: 0.2rem;
+        font-size: clamp(1rem, 2.4vw, 1.8rem);
+        white-space: pre-line;
+      }
+
+      .media {
+        margin-top: 1rem;
+        max-width: min(560px, 80vw);
+      }
+
+      .media iframe {
+        width: 100%;
+        border: 0;
+        border-radius: 8px;
+      }
+
+      .archive-link {
+        position: absolute;
+        right: clamp(1.25rem, 3vw, 3rem);
+        bottom: clamp(1.25rem, 3vw, 3rem);
+        color: #fff;
+        font-family: "Inter", sans-serif;
+        font-style: italic;
+        font-weight: 200;
+        font-size: clamp(0.8rem, 1.5vw, 1.2rem);
+        letter-spacing: 0.14em;
+        text-transform: lowercase;
+        text-decoration: none;
       }
     </style>
   </head>
   <body>
-    <h1 class="brand">jkbb
-drones 01</h1>
+    <main class="content">
+      <a class="brand-link" href="/">jkbb</a>
+      <div id="subtitle" class="subtitle"></div>
+      <div id="media" class="media" aria-live="polite"></div>
+    </main>
+
+    <a class="archive-link" href="#">archive</a>
+
+    <script>
+      const subtitleNode = document.getElementById("subtitle");
+      const mediaNode = document.getElementById("media");
+
+      const getYouTubeEmbedUrl = (url) => {
+        try {
+          const parsed = new URL(url);
+          const isYouTubeHost =
+            parsed.hostname.includes("youtube.com") || parsed.hostname === "youtu.be";
+          if (!isYouTubeHost) return null;
+
+          let videoId = "";
+          if (parsed.hostname === "youtu.be") {
+            videoId = parsed.pathname.replace("/", "");
+          } else if (parsed.pathname === "/watch") {
+            videoId = parsed.searchParams.get("v") || "";
+          } else if (parsed.pathname.startsWith("/embed/")) {
+            videoId = parsed.pathname.split("/embed/")[1] || "";
+          }
+
+          return videoId ? `https://www.youtube.com/embed/${videoId}` : null;
+        } catch {
+          return null;
+        }
+      };
+
+      const getSoundCloudEmbedUrl = (url) => {
+        try {
+          const parsed = new URL(url);
+          if (!parsed.hostname.includes("soundcloud.com")) return null;
+          return `https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}`;
+        } catch {
+          return null;
+        }
+      };
+
+      const resolveEmbedFromUrl = (url) => {
+        const youtube = getYouTubeEmbedUrl(url);
+        if (youtube) {
+          return { embedUrl: youtube, height: "315", allowFullscreen: true };
+        }
+
+        const soundcloud = getSoundCloudEmbedUrl(url);
+        if (soundcloud) {
+          return { embedUrl: soundcloud, height: "166", allowFullscreen: false };
+        }
+
+        return null;
+      };
+
+      const renderMedia = (content) => {
+        mediaNode.innerHTML = "";
+
+        const mediaUrl =
+          content.mediaUrl ||
+          content.media_link ||
+          (content.media && content.media.url) ||
+          "";
+
+        if (!mediaUrl) return;
+
+        const media = resolveEmbedFromUrl(mediaUrl);
+        if (!media) return;
+
+        const iframe = document.createElement("iframe");
+        iframe.src = media.embedUrl;
+        iframe.height = media.height;
+        iframe.loading = "lazy";
+        iframe.referrerPolicy = "strict-origin-when-cross-origin";
+        iframe.allow =
+          "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
+
+        if (media.allowFullscreen) {
+          iframe.allowFullscreen = true;
+        }
+
+        mediaNode.appendChild(iframe);
+      };
+
+      fetch("./front-page.json")
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error("Could not load front-page.json");
+          }
+          return response.json();
+        })
+        .then((content) => {
+          subtitleNode.textContent = content.subtitle || "";
+          renderMedia(content);
+        })
+        .catch(() => {
+          subtitleNode.textContent = "";
+          mediaNode.innerHTML = "";
+        });
+    </script>
   </body>
 </html>
