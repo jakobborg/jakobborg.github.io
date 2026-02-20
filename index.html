@@ -74,7 +74,7 @@
         display: none;
         align-items: center;
         justify-content: center;
-        background: rgba(6, 10, 18, 0.72);
+        background: rgba(6, 10, 18, 0.46);
         z-index: 20;
       }
 
@@ -84,12 +84,15 @@
 
       .overlay-inner {
         position: relative;
-        width: min(760px, 88vw);
+        width: min(420px, 88vw);
       }
 
       .overlay-player {
-        width: 100%;
-        height: 300px;
+        display: block;
+        width: min(360px, 100%);
+        height: auto;
+        aspect-ratio: 1 / 1;
+        margin: 0 auto;
         border: 0;
         border-radius: 10px;
         background: rgba(28, 42, 58, 0.9);
@@ -209,7 +212,7 @@
       const resolveEmbedFromUrl = (url, autoPlay = false) => {
         const soundcloud = getSoundCloudEmbedUrl(url, autoPlay);
         if (soundcloud) {
-          return { embedUrl: soundcloud, height: "300", allowFullscreen: false };
+          return { embedUrl: soundcloud, height: "360", allowFullscreen: false };
         }
 
         return null;
