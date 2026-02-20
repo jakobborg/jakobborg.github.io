@@ -96,6 +96,20 @@
         box-shadow: 0 16px 30px rgba(8, 14, 24, 0.45);
       }
 
+      .overlay-fallback {
+        margin: 0;
+        padding: 1rem 1.25rem;
+        border-radius: 10px;
+        background: rgba(28, 42, 58, 0.9);
+        color: #fff;
+        font-family: "Inter", sans-serif;
+        letter-spacing: 0.04em;
+      }
+
+      .overlay-fallback a {
+        color: #a9ccf0;
+      }
+
       .overlay-close {
         position: absolute;
         top: -0.8rem;
@@ -150,9 +164,33 @@
       const getSoundCloudEmbedUrl = (url, autoPlay = false) => {
         try {
           const parsed = new URL(url);
-          if (!parsed.hostname.includes("soundcloud.com")) return null;
+          const hostname = parsed.hostname.toLowerCase();
+          const isSoundCloudLink =
+            hostname.includes("soundcloud.com") || hostname === "snd.sc" || hostname.endsWith(".snd.sc");
+
+          if (!isSoundCloudLink) return null;
+
+          const shareUrl = parsed.href;
+
+          if (hostname === "w.soundcloud.com") {
+            const existingUrl = parsed.searchParams.get("url");
+            if (!existingUrl) return shareUrl;
+
+            const widgetParams = new URLSearchParams(parsed.search);
+            widgetParams.set("url", existingUrl);
+            widgetParams.set("color", "#7a9ab8");
+            widgetParams.set("auto_play", autoPlay ? "true" : "false");
+            widgetParams.set("hide_related", "true");
+            widgetParams.set("show_comments", "false");
+            widgetParams.set("show_user", "true");
+            widgetParams.set("show_reposts", "false");
+            widgetParams.set("show_teaser", "false");
+            widgetParams.set("visual", "true");
+            return `https://w.soundcloud.com/player/?${widgetParams.toString()}`;
+          }
+
           const params = new URLSearchParams({
-            url,
+            url: shareUrl,
             color: "#7a9ab8",
             auto_play: autoPlay ? "true" : "false",
             hide_related: "true",
@@ -189,7 +227,10 @@
         if (!mediaUrl) return;
 
         const media = resolveEmbedFromUrl(mediaUrl, autoPlay);
-        if (!media) return;
+        if (!media) {
+          mediaNode.innerHTML = `<p class="overlay-fallback">Could not load embedded player. <a href="${mediaUrl}" target="_blank" rel="noopener noreferrer">Open track in a new tab</a>.</p>`;
+          return;
+        }
 
         const iframe = document.createElement("iframe");
         iframe.src = media.embedUrl;
