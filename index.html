@@ -62,15 +62,53 @@
         white-space: pre-line;
       }
 
-      .media {
-        margin-top: 1rem;
-        max-width: min(560px, 80vw);
+      .subtitle-link {
+        color: inherit;
+        text-decoration: underline;
+        text-underline-offset: 0.16em;
       }
 
-      .media iframe {
+      .overlay {
+        position: fixed;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: rgba(6, 10, 18, 0.72);
+        z-index: 20;
+      }
+
+      .overlay.is-open {
+        display: flex;
+      }
+
+      .overlay-inner {
+        position: relative;
+        width: min(760px, 88vw);
+      }
+
+      .overlay-player {
         width: 100%;
+        height: 300px;
         border: 0;
-        border-radius: 8px;
+        border-radius: 10px;
+        background: rgba(28, 42, 58, 0.9);
+        box-shadow: 0 16px 30px rgba(8, 14, 24, 0.45);
+      }
+
+      .overlay-close {
+        position: absolute;
+        top: -0.8rem;
+        right: -0.8rem;
+        width: 2rem;
+        height: 2rem;
+        border: 0;
+        border-radius: 999px;
+        background: rgba(28, 42, 58, 0.95);
+        color: #fff;
+        cursor: pointer;
+        font-size: 1.15rem;
+        line-height: 1;
       }
 
       .archive-link {
@@ -91,63 +129,55 @@
   <body>
     <main class="content">
       <a class="brand-link" href="/">jkbb</a>
-      <div id="subtitle" class="subtitle"></div>
-      <div id="media" class="media" aria-live="polite"></div>
+      <div class="subtitle"><a id="subtitle-link" class="subtitle-link" href="#"></a></div>
     </main>
 
     <a class="archive-link" href="#">archive</a>
 
+    <div id="overlay" class="overlay" aria-hidden="true">
+      <div class="overlay-inner">
+        <button id="overlay-close" class="overlay-close" aria-label="Close player">×</button>
+        <div id="media" aria-live="polite"></div>
+      </div>
+    </div>
+
     <script>
-      const subtitleNode = document.getElementById("subtitle");
+      const subtitleLinkNode = document.getElementById("subtitle-link");
       const mediaNode = document.getElementById("media");
+      const overlayNode = document.getElementById("overlay");
+      const overlayCloseNode = document.getElementById("overlay-close");
 
-      const getYouTubeEmbedUrl = (url) => {
-        try {
-          const parsed = new URL(url);
-          const isYouTubeHost =
-            parsed.hostname.includes("youtube.com") || parsed.hostname === "youtu.be";
-          if (!isYouTubeHost) return null;
-
-          let videoId = "";
-          if (parsed.hostname === "youtu.be") {
-            videoId = parsed.pathname.replace("/", "");
-          } else if (parsed.pathname === "/watch") {
-            videoId = parsed.searchParams.get("v") || "";
-          } else if (parsed.pathname.startsWith("/embed/")) {
-            videoId = parsed.pathname.split("/embed/")[1] || "";
-          }
-
-          return videoId ? `https://www.youtube.com/embed/${videoId}` : null;
-        } catch {
-          return null;
-        }
-      };
-
-      const getSoundCloudEmbedUrl = (url) => {
+      const getSoundCloudEmbedUrl = (url, autoPlay = false) => {
         try {
           const parsed = new URL(url);
           if (!parsed.hostname.includes("soundcloud.com")) return null;
-          return `https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}`;
+          const params = new URLSearchParams({
+            url,
+            color: "#7a9ab8",
+            auto_play: autoPlay ? "true" : "false",
+            hide_related: "true",
+            show_comments: "false",
+            show_user: "true",
+            show_reposts: "false",
+            show_teaser: "false",
+            visual: "true"
+          });
+          return `https://w.soundcloud.com/player/?${params.toString()}`;
         } catch {
           return null;
         }
       };
 
-      const resolveEmbedFromUrl = (url) => {
-        const youtube = getYouTubeEmbedUrl(url);
-        if (youtube) {
-          return { embedUrl: youtube, height: "315", allowFullscreen: true };
-        }
-
-        const soundcloud = getSoundCloudEmbedUrl(url);
+      const resolveEmbedFromUrl = (url, autoPlay = false) => {
+        const soundcloud = getSoundCloudEmbedUrl(url, autoPlay);
         if (soundcloud) {
-          return { embedUrl: soundcloud, height: "166", allowFullscreen: false };
+          return { embedUrl: soundcloud, height: "300", allowFullscreen: false };
         }
 
         return null;
       };
 
-      const renderMedia = (content) => {
+      const renderMedia = (content, autoPlay = false) => {
         mediaNode.innerHTML = "";
 
         const mediaUrl =
@@ -158,12 +188,13 @@
 
         if (!mediaUrl) return;
 
-        const media = resolveEmbedFromUrl(mediaUrl);
+        const media = resolveEmbedFromUrl(mediaUrl, autoPlay);
         if (!media) return;
 
         const iframe = document.createElement("iframe");
         iframe.src = media.embedUrl;
         iframe.height = media.height;
+        iframe.className = "overlay-player";
         iframe.loading = "lazy";
         iframe.referrerPolicy = "strict-origin-when-cross-origin";
         iframe.allow =
@@ -176,6 +207,25 @@
         mediaNode.appendChild(iframe);
       };
 
+      const openOverlay = (content) => {
+        overlayNode.classList.add("is-open");
+        overlayNode.setAttribute("aria-hidden", "false");
+        renderMedia(content, true);
+      };
+
+      const closeOverlay = () => {
+        overlayNode.classList.remove("is-open");
+        overlayNode.setAttribute("aria-hidden", "true");
+        mediaNode.innerHTML = "";
+      };
+
+      overlayCloseNode.addEventListener("click", closeOverlay);
+      overlayNode.addEventListener("click", (event) => {
+        if (event.target === overlayNode) {
+          closeOverlay();
+        }
+      });
+
       fetch("./front-page.json")
         .then((response) => {
           if (!response.ok) {
@@ -184,11 +234,14 @@
           return response.json();
         })
         .then((content) => {
-          subtitleNode.textContent = content.subtitle || "";
-          renderMedia(content);
+          subtitleLinkNode.textContent = content.subtitle || "";
+          subtitleLinkNode.addEventListener("click", (event) => {
+            event.preventDefault();
+            openOverlay(content);
+          });
         })
         .catch(() => {
-          subtitleNode.textContent = "";
+          subtitleLinkNode.textContent = "";
           mediaNode.innerHTML = "";
         });
     </script>
