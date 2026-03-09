@@ -168,54 +168,26 @@
         try {
           const parsed = new URL(url);
           const hostname = parsed.hostname.toLowerCase();
-          const isSoundCloudLink =
-            hostname.includes("soundcloud.com") || hostname === "snd.sc" || hostname.endsWith(".snd.sc");
+          if (!hostname.includes("soundcloud.com") && hostname !== "snd.sc" && !hostname.endsWith(".snd.sc")) return null;
 
-          if (!isSoundCloudLink) return null;
+          const isWidget = hostname === "w.soundcloud.com";
+          if (isWidget && !parsed.searchParams.get("url")) return parsed.href;
 
-          const shareUrl = parsed.href;
-
-          if (hostname === "w.soundcloud.com") {
-            const existingUrl = parsed.searchParams.get("url");
-            if (!existingUrl) return shareUrl;
-
-            const widgetParams = new URLSearchParams(parsed.search);
-            widgetParams.set("url", existingUrl);
-            widgetParams.set("color", "#7a9ab8");
-            widgetParams.set("auto_play", autoPlay ? "true" : "false");
-            widgetParams.set("hide_related", "true");
-            widgetParams.set("show_comments", "false");
-            widgetParams.set("show_user", "true");
-            widgetParams.set("show_reposts", "false");
-            widgetParams.set("show_teaser", "false");
-            widgetParams.set("visual", "true");
-            return `https://w.soundcloud.com/player/?${widgetParams.toString()}`;
-          }
-
-          const params = new URLSearchParams({
-            url: shareUrl,
-            color: "#7a9ab8",
-            auto_play: autoPlay ? "true" : "false",
-            hide_related: "true",
-            show_comments: "false",
-            show_user: "true",
-            show_reposts: "false",
-            show_teaser: "false",
-            visual: "true"
-          });
+          const trackUrl = isWidget ? parsed.searchParams.get("url") : parsed.href;
+          const params = new URLSearchParams(isWidget ? parsed.search : "");
+          params.set("url", trackUrl);
+          params.set("color", "#7a9ab8");
+          params.set("auto_play", autoPlay ? "true" : "false");
+          params.set("hide_related", "true");
+          params.set("show_comments", "false");
+          params.set("show_user", "true");
+          params.set("show_reposts", "false");
+          params.set("show_teaser", "false");
+          params.set("visual", "true");
           return `https://w.soundcloud.com/player/?${params.toString()}`;
         } catch {
           return null;
         }
-      };
-
-      const resolveEmbedFromUrl = (url, autoPlay = false) => {
-        const soundcloud = getSoundCloudEmbedUrl(url, autoPlay);
-        if (soundcloud) {
-          return { embedUrl: soundcloud, height: "360", allowFullscreen: false };
-        }
-
-        return null;
       };
 
       const renderMedia = (content, autoPlay = false) => {
@@ -229,25 +201,20 @@
 
         if (!mediaUrl) return;
 
-        const media = resolveEmbedFromUrl(mediaUrl, autoPlay);
-        if (!media) {
+        const embedUrl = getSoundCloudEmbedUrl(mediaUrl, autoPlay);
+        if (!embedUrl) {
           mediaNode.innerHTML = `<p class="overlay-fallback">Could not load embedded player. <a href="${mediaUrl}" target="_blank" rel="noopener noreferrer">Open track in a new tab</a>.</p>`;
           return;
         }
 
         const iframe = document.createElement("iframe");
-        iframe.src = media.embedUrl;
-        iframe.height = media.height;
+        iframe.src = embedUrl;
+        iframe.height = "360";
         iframe.className = "overlay-player";
         iframe.loading = "lazy";
         iframe.referrerPolicy = "strict-origin-when-cross-origin";
         iframe.allow =
           "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
-
-        if (media.allowFullscreen) {
-          iframe.allowFullscreen = true;
-        }
-
         mediaNode.appendChild(iframe);
       };
 
@@ -286,7 +253,6 @@
         })
         .catch(() => {
           subtitleLinkNode.textContent = "";
-          mediaNode.innerHTML = "";
         });
     </script>
   </body>
