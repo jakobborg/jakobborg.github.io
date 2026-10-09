@@ -18,6 +18,7 @@
   </head>
   <body>
     <main id="content">Loading…</main>
+    <script src="https://cdn.jsdelivr.net/npm/marked@13/marked.min.js"></script>
     <script>
       const content = document.getElementById("content");
 
@@ -47,53 +48,8 @@
         }
       }
 
-      function inline(text) {
-        const esc = (s) =>
-          s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-        let out = esc(text);
-        out = out.replace(/`([^`]+)`/g, "<code>$1</code>");
-        out = out.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
-        out = out.replace(/\*([^*]+)\*/g, "<em>$1</em>");
-        out = out.replace(
-          /\[([^\]]+)\]\(([^)]+)\)/g,
-          '<a href="$2">$1</a>'
-        );
-        return out;
-      }
-
       function render(md) {
-        const blocks = md.replace(/\r\n/g, "\n").split(/\n{2,}/);
-        return blocks
-          .map((block) => {
-            const lines = block.split("\n");
-            const heading = lines[0].match(/^(#{1,6})\s+(.*)$/);
-            if (heading) {
-              const level = heading[1].length;
-              return `<h${level}>${inline(heading[2])}</h${level}>`;
-            }
-            if (/^(-|\*|\d+\.)\s/.test(lines[0])) {
-              const ordered = /^\d+\.\s/.test(lines[0]);
-              const items = lines.map((line) =>
-                line.replace(/^(-|\*|\d+\.)\s+/, "")
-              );
-              const tag = ordered ? "ol" : "ul";
-              return `<${tag}>${items
-                .map((item) => `<li>${inline(item)}</li>`)
-                .join("")}</${tag}>`;
-            }
-            if (/^>\s?/.test(lines[0])) {
-              return `<blockquote>${inline(
-                lines.map((l) => l.replace(/^>\s?/, "")).join(" ")
-              )}</blockquote>`;
-            }
-            if (block.startsWith("```")) {
-              return `<pre><code>${block
-                .replace(/^```\w*\n?/, "")
-                .replace(/\n?```$/, "")}</code></pre>`;
-            }
-            return `<p>${inline(lines.join(" "))}</p>`;
-          })
-          .join("\n");
+        return marked.parse(md);
       }
 
       window.addEventListener("hashchange", load);
