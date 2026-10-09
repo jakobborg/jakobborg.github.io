@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>wiki</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: sans-serif;
+        padding: 2rem;
+        max-width: 46rem;
+      }
+      #error {
+        color: #b00;
+      }
+    </style>
+  </head>
+  <body>
+    <main id="content">Loading…</main>
+    <script src="https://cdn.jsdelivr.net/npm/marked@13/marked.min.js"></script>
+    <script>
+      const content = document.getElementById("content");
+
+      function slug() {
+        const hash = location.hash.replace(/^#\/?/, "").replace(/\.md$/, "");
+        return decodeURIComponent(hash);
+      }
+
+      async function load() {
+        const page = slug();
+        if (!page) {
+          content.textContent = "No page specified. Try /wiki.html#/about";
+          return;
+        }
+        content.textContent = "Loading…";
+        try {
+          const res = await fetch(`/content/${page}.md`);
+          if (!res.ok) throw new Error(res.status + " " + res.statusText);
+          content.innerHTML = render(await res.text());
+          document.title = page;
+        } catch (err) {
+          content.innerHTML = "";
+          const el = document.createElement("p");
+          el.id = "error";
+          el.textContent = "Could not load page '" + page + "': " + err.message;
+          content.appendChild(el);
+        }
+      }
+
+      function render(md) {
+        return marked.parse(md);
+      }
+
+      window.addEventListener("hashchange", load);
+      window.addEventListener("DOMContentLoaded", load);
+    </script>
+  </body>
+</html>
